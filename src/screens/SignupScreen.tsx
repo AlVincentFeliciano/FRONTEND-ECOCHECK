@@ -1,13 +1,21 @@
 // /ecocheck-app/src/screens/SignupScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Alert,
+  ImageBackground,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import client from '../api/client';
 import axios from 'axios';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { storeToken } from '../utils/auth';
 
-// After signup, you might want to navigate to Login or Home
 type SignupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
 interface Props {
@@ -15,34 +23,27 @@ interface Props {
 }
 
 const SignupScreen: React.FC<Props> = ({ navigation }) => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password.');
+    if (!name || !email || !password) {
+      Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('📩 Sending registration request:', { email, password });
-
-      const response = await client.post('/auth/register', { email, password });
-
+      const response = await client.post('/auth/register', { name, email, password });
       const { token } = response.data;
-      console.log('✅ Registration response:', response.data);
 
-      // Optionally auto-login by storing token
       await storeToken(token);
 
       Alert.alert('Success', 'Registration successful! You can now log in.');
       navigation.navigate('Login');
-
     } catch (error: unknown) {
-      console.error('❌ Registration error:', error);
-
       if (axios.isAxiosError(error)) {
         const msg =
           error.response?.data?.msg ||
@@ -58,35 +59,119 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button title={loading ? 'Registering...' : 'Register'} onPress={handleRegister} disabled={loading} />
-      <View style={{ marginTop: 10 }}>
-        <Button title="Back to Login" onPress={() => navigation.navigate('Login')} />
+    <ImageBackground
+      source={require('../assets/login-bg.jpg')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
+        <View style={styles.container}>
+          <Text style={styles.title}>Register</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Full Name"
+            placeholderTextColor="#666"
+            value={name}
+            onChangeText={setName}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Email"
+            placeholderTextColor="#666"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#666"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          {/* ✅ Styled Register button */}
+          <TouchableOpacity
+            style={styles.button}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Register</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* 🔙 Back to Login as green text link */}
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Login')}
+            style={{ marginTop: 15, alignItems: 'center' }}
+          >
+            <Text style={styles.linkText}>Back to Login</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#ccc', padding: 10, marginBottom: 10, borderRadius: 5 },
+  background: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  container: {
+    backgroundColor: 'rgba(255, 255, 255, 0.67)',
+    borderRadius: 12,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  title: {
+    fontSize: 28,
+    marginBottom: 20,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    color: '#2e7d32',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  linkText: {
+    color: '#2e7d32', // ✅ same green as "Sign up" link in Login
+    fontSize: 15,
+    fontWeight: '600',
+  },
 });
 
 export default SignupScreen;

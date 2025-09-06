@@ -1,8 +1,8 @@
 // frontend/src/api/reports.ts
+import { API_URL } from '../utils/config'; // import the production API URL
 import axios from 'axios';
 import { getToken } from '../utils/auth';
 
-const API_URL = 'http://192.168.1.60:5000/api'; // your backend
 
 // Create a new report
 export const createReport = async (formData: FormData) => {

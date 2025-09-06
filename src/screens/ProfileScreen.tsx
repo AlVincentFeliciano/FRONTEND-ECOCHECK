@@ -1,15 +1,55 @@
-// /ecocheck-app/src/screens/ProfileScreen.tsx
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, SafeAreaView, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { removeToken } from '../utils/auth';
+import { removeToken, getToken } from '../utils/auth';
+import client from '../api/client';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { jwtDecode } from 'jwt-decode';
 
 type ProfileScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
+interface DecodedToken {
+  user: { id: string };
+  exp: number;
+}
+
+interface User {
+  name: string;
+  email: string;
+  bio?: string;
+  profilePic?: string | null;
+  points?: number; // ✅ Added points
+}
+
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const [user, setUser] = useState<User | null>(null);
+
+  const fetchUser = async () => {
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const decoded: DecodedToken = jwtDecode(token);
+      const userId = decoded.user.id;
+
+      const res = await client.get(`/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const userData: User = res.data?.data;
+      if (userData) {
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error('❌ Fetch user error:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -30,24 +70,35 @@ const ProfileScreen: React.FC = () => {
       <View style={styles.container}>
         <Text style={styles.header}>Profile</Text>
 
-        {/* Profile Card */}
-        <View style={styles.card}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>AJ</Text>
+        {user && (
+          <View style={styles.card}>
+            <View style={styles.avatar}>
+              {user.profilePic ? (
+                <Image
+                  source={{ uri: user.profilePic }}
+                  style={styles.profileImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{user.name?.charAt(0) || 'U'}</Text>
+              )}
+            </View>
+
+            <Text style={styles.name}>{user.name}</Text>
+            <Text style={styles.bio}>{user.bio || user.email}</Text>
+
+            {/* ✅ Display points */}
+            <Text style={styles.points}>Points: {user.points || 0}</Text>
+
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => navigation.navigate('EditProfile')}
+            >
+              <Text style={styles.editButtonText}>Edit Profile</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.name}>Alex Johnson</Text>
-          <Text style={styles.bio}>Passionate environmental advocate.</Text>
+        )}
 
-          {/* ✅ Updated Edit Profile button with navigation */}
-          <TouchableOpacity 
-            style={styles.editButton} 
-            onPress={() => navigation.navigate('EditProfile')}
-          >
-            <Text style={styles.editButtonText}>Edit Profile</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -57,21 +108,9 @@ const ProfileScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f0f4f7',
-  },
-  container: { 
-    flex: 1, 
-    alignItems: 'center', 
-    padding: 20, 
-    paddingTop: 40, // extra top padding for spacing from status bar
-  },
-  header: { 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-    marginVertical: 15 
-  },
+  safeArea: { flex: 1, backgroundColor: '#f0f4f7' },
+  container: { flex: 1, alignItems: 'center', padding: 20, paddingTop: 40 },
+  header: { fontSize: 22, fontWeight: 'bold', marginVertical: 15 },
   card: {
     backgroundColor: '#43a047',
     padding: 20,
@@ -92,34 +131,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+    overflow: 'hidden',
   },
-  avatarText: { 
-    color: '#fff', 
-    fontSize: 24, 
-    fontWeight: 'bold' 
-  },
-  name: { 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#fff', 
-    marginBottom: 5 
-  },
-  bio: { 
-    fontSize: 14, 
-    color: '#f1f1f1', 
-    marginBottom: 15, 
-    textAlign: 'center' 
-  },
+  avatarText: { color: '#fff', fontSize: 24, fontWeight: 'bold' },
+  profileImage: { width: 70, height: 70, borderRadius: 35 },
+  name: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginBottom: 5 },
+  bio: { fontSize: 14, color: '#f1f1f1', marginBottom: 5, textAlign: 'center' },
+  points: { fontSize: 16, color: '#fff', fontWeight: 'bold', marginBottom: 15 },
   editButton: {
     backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,
+    marginTop: 10,
   },
-  editButtonText: {
-    color: '#333',
-    fontWeight: 'bold',
-  },
+  editButtonText: { color: '#333', fontWeight: 'bold' },
   logoutButton: {
     marginTop: 20,
     backgroundColor: '#e53935',
@@ -127,10 +153,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
   },
-  logoutButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  }
+  logoutButtonText: { color: '#fff', fontWeight: 'bold' },
 });
 
 export default ProfileScreen;

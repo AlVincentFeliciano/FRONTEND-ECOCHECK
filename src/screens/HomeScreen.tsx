@@ -1,12 +1,12 @@
-// /ecocheck-app/src/screens/HomeScreen.tsx
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, SafeAreaView, Image } from 'react-native';
+import Swiper from 'react-native-swiper';
+import { WebView } from 'react-native-webview';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { TabParamList } from '../navigation/TabNavigator';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
-
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList, 'HomeTab'>,
@@ -21,26 +21,41 @@ const wasteTopics = [
   {
     title: 'Recycle Paper & Cardboard',
     content: 'Always flatten cardboard boxes, remove staples, and recycle clean paper products.',
+    image: require('../assets/paper.png'),
+    extra: 'Did you know? Recycling one ton of paper saves 17 trees and 7,000 gallons of water.',
   },
   {
     title: 'Sort Plastics Correctly',
     content: 'Check recycling symbols and separate plastics by type to ensure proper processing.',
+    image: require('../assets/plastic.png'),
+    extra: 'Plastic bottles can take up to 450 years to decompose in landfills!',
   },
   {
     title: 'Compost Your Organics',
     content: 'Food scraps, garden waste, and organic matter can be composted to reduce landfill waste.',
+    image: require('../assets/compost.png'),
+    extra: 'Composting reduces methane emissions and creates nutrient-rich soil.',
   },
   {
     title: 'Handle E-Waste Safely',
     content: 'Electronics should be recycled at certified e-waste facilities to prevent harmful chemicals from leaking.',
+    image: require('../assets/ewaste.png'),
+    extra: 'E-waste contains valuable metals like gold, silver, and copper that can be reused.',
   },
+];
+
+// ✅ YouTube video links
+const youtubeVideos = [
+  "https://www.youtube.com/embed/BzQHLp2_4tU",
+  "https://www.youtube.com/embed/6jQ7y_qQYUA",
+  "https://www.youtube.com/embed/4sU9J3xXWqM",
 ];
 
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState<{ title: string; content: string } | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<typeof wasteTopics[0] | null>(null);
 
-  const openModal = (topic: { title: string; content: string }) => {
+  const openModal = (topic: typeof wasteTopics[0]) => {
     setSelectedTopic(topic);
     setModalVisible(true);
   };
@@ -74,22 +89,42 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         </View>
 
         {/* Modal */}
-        <Modal
-          visible={modalVisible}
-          animationType="slide"
-          transparent={true}
-          onRequestClose={closeModal}
-        >
+        <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={closeModal}>
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
+            <ScrollView contentContainerStyle={styles.modalContent}>
               <Text style={styles.modalTitle}>{selectedTopic?.title}</Text>
+              {selectedTopic?.image && <Image source={selectedTopic.image} style={styles.modalImage} />}
               <Text style={styles.modalText}>{selectedTopic?.content}</Text>
+              <Text style={styles.modalExtra}>{selectedTopic?.extra}</Text>
               <TouchableOpacity style={styles.closeButton} onPress={closeModal}>
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </Modal>
+
+        {/* ✅ Auto-sliding YouTube video carousel */}
+        <Text style={styles.sectionTitle}>Useful Videos</Text>
+        <View style={styles.carouselContainer}>
+          <Swiper
+            autoplay
+            autoplayTimeout={6} // every 6 seconds
+            loop
+            showsPagination
+            activeDotColor="#4caf50"
+          >
+            {youtubeVideos.map((videoUrl, idx) => (
+              <View key={idx} style={styles.videoWrapper}>
+                <WebView
+                  source={{ uri: videoUrl }}
+                  style={styles.video}
+                  javaScriptEnabled
+                  domStorageEnabled
+                />
+              </View>
+            ))}
+          </Swiper>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -175,6 +210,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 20,
+    alignItems: 'center',
   },
   modalTitle: {
     fontSize: 20,
@@ -183,17 +219,43 @@ const styles = StyleSheet.create({
   },
   modalText: {
     fontSize: 16,
+    marginBottom: 15,
+  },
+  modalExtra: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: '#333',
     marginBottom: 20,
+  },
+  modalImage: {
+    width: 250,
+    height: 150,
+    resizeMode: 'contain',
+    marginBottom: 15,
   },
   closeButton: {
     backgroundColor: '#4caf50',
     paddingVertical: 10,
     borderRadius: 5,
     alignItems: 'center',
+    width: '100%',
   },
   closeButtonText: {
     color: '#fff',
     fontWeight: '500',
+  },
+  carouselContainer: {
+    height: 220,
+    width: '100%',
+    marginTop: 20,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  videoWrapper: {
+    flex: 1,
+  },
+  video: {
+    flex: 1,
   },
 });
 

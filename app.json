@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ecocheck-app",
+    "name": "EcoCheck",
     "slug": "ecocheck-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -16,12 +16,14 @@
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
-    },
+  "package": "com.AlVincentFeliciano.ecocheck",
+  "versionCode": 1,                    
+  "adaptiveIcon": {
+    "foregroundImage": "./assets/adaptive-icon.png",
+    "backgroundColor": "#ffffff"
+  },
+  "edgeToEdgeEnabled": true
+},
     "web": {
       "favicon": "./assets/favicon.png"
     },
