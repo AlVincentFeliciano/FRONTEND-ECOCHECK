@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert
 } from "react-native";
+import { Picker } from "@react-native-picker/picker";
 import { useNavigation } from "@react-navigation/native";
 import client from "../api/client";
 
@@ -21,6 +22,7 @@ const SignupScreen = () => {
   const [email, setEmail] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [displayContactNumber, setDisplayContactNumber] = useState("");
+  const [location, setLocation] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,6 +33,7 @@ const SignupScreen = () => {
     if (!firstName) newErrors.firstName = "First name is required";
     if (!lastName) newErrors.lastName = "Last name is required";
     if (!email) newErrors.email = "Email is required";
+    if (!location) newErrors.location = "Location is required";
     if (!contactNumber) newErrors.contactNumber = "Contact number is required";
     if (contactNumber && contactNumber.length !== 10) newErrors.contactNumber = "Mobile number must be exactly 10 digits";
     if (!password) newErrors.password = "Password is required";
@@ -48,6 +51,7 @@ const SignupScreen = () => {
         middleInitial,
         lastName,
         email,
+        location,
         contactNumber: `0${contactNumber}`, // Convert 9926492991 to 09926492991 (PH format)
         password,
       });
@@ -123,6 +127,20 @@ const SignupScreen = () => {
         onChangeText={setEmail}
       />
       {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
+      <View style={[styles.pickerContainer, errors.location ? { borderColor: "red" } : {}]}>
+        <Picker
+          selectedValue={location}
+          onValueChange={(itemValue) => setLocation(itemValue)}
+          style={styles.picker}
+          dropdownIconColor="#555"
+        >
+          <Picker.Item label="Select Location" value="" />
+          <Picker.Item label="Bulaon" value="Bulaon" />
+          <Picker.Item label="Del Carmen" value="Del Carmen" />
+        </Picker>
+      </View>
+      {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
 
       <View style={styles.contactContainer}>
         <Text style={styles.countryCode}>+63</Text>
@@ -208,6 +226,19 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 10,
     backgroundColor: "#fff",
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 8,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+  },
+  picker: {
+    height: 50,
+    width: "100%",
+    color: "#555",
   },
   contactContainer: {
     flexDirection: "row",
