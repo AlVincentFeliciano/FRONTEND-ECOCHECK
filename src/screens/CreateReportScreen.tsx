@@ -17,7 +17,8 @@ const CreateReportScreen = () => {
   const [displayContactNumber, setDisplayContactNumber] = useState('');
   const [description, setDescription] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(''); // Geocoded address for display
+  const [userLocation, setUserLocation] = useState(''); // User's registered location (Bulaon/Del Carmen)
   const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
@@ -46,6 +47,8 @@ const CreateReportScreen = () => {
           setFirstName(userData.firstName || '');
           setMiddleName(userData.middleInitial || '');
           setLastName(userData.lastName || '');
+          // Store user's registered location (Bulaon or Del Carmen)
+          setUserLocation(userData.location || '');
           // Pre-fill contact number (remove +63 prefix if exists)
           const contact = userData.contactNumber || '';
           if (contact.startsWith('0') && contact.length === 11) {
@@ -117,6 +120,7 @@ const CreateReportScreen = () => {
       Alert.alert('Missing Info', 'Please take a photo and get your location.');
       return;
     }
+    
     setLoading(true);
     try {
       const formData = new FormData();
@@ -126,7 +130,12 @@ const CreateReportScreen = () => {
       formData.append('contact', `+63${contactNumber}`);
       formData.append('description', description);
       formData.append('landmark', landmark);
-      formData.append('location', location);
+      
+      // Send both locations:
+      // - location: Full geocoded address for display in dashboard
+      // - userLocation: User's signup location (Del Carmen/Bulaon) for filtering
+      formData.append('location', location); // Full address for display
+      formData.append('userLocation', userLocation || ''); // ONLY use signup location for filtering
       formData.append('latitude', String(currentLocation.coords.latitude));
       formData.append('longitude', String(currentLocation.coords.longitude));
       formData.append('photo', { uri: photoUri, type: 'image/jpeg', name: 'photo.jpg' } as any);

@@ -30,3 +30,35 @@ export const getAllReports = async () => {
 
   return response.data;
 };
+
+// Confirm resolution (user confirms the report is resolved)
+export const confirmResolution = async (reportId: string) => {
+  const token = await getToken();
+  if (!token) throw new Error('No auth token found');
+
+  const response = await axios.put(
+    `${API_URL}/reports/${reportId}/confirm`,
+    {},
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return response.data;
+};
+
+// Reject resolution (user reports the issue is still not resolved)
+export const rejectResolution = async (reportId: string, reason: string) => {
+  const token = await getToken();
+  if (!token) throw new Error('No auth token found');
+
+  const response = await axios.put(
+    `${API_URL}/reports/${reportId}/reject`,
+    { reason },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  return response.data;
+};

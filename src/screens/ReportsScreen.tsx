@@ -15,8 +15,10 @@ import {
   Platform,
   UIManager,
   Dimensions,
+  Alert,
+  TextInput,
 } from 'react-native';
-import { getAllReports } from '../api/reports';
+import { getAllReports, confirmResolution, rejectResolution } from '../api/reports';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +35,9 @@ const ReportsScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const fetchReports = async () => {
     try {
@@ -81,12 +86,64 @@ const ReportsScreen = () => {
     switch (status.toLowerCase()) {
       case 'pending':
         return '#fbc02d';
-      case 'in progress':
+      case 'pending confirmation':
         return '#29b6f6';
-      case 'completed':
+      case 'on going':
+        return '#ff9800';
+      case 'resolved':
         return '#66bb6a';
       default:
         return '#9e9e9e';
+    }
+  };
+
+  const handleConfirmResolution = async (reportId: string) => {
+    Alert.alert(
+      'Confirm Resolution',
+      'Are you sure the issue has been resolved?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, Confirm',
+          onPress: async () => {
+            try {
+              await confirmResolution(reportId);
+              Alert.alert('Success', 'Thank you! You have earned 10 points.');
+              fetchReports(); // Refresh the list
+            } catch (error) {
+              console.error(error);
+              Alert.alert('Error', 'Failed to confirm resolution.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRejectResolution = (reportId: string) => {
+    setSelectedReportId(reportId);
+    setRejectionReason('');
+    setRejectionModalVisible(true);
+  };
+
+  const submitRejection = async () => {
+    if (!rejectionReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for rejection.');
+      return;
+    }
+
+    if (!selectedReportId) return;
+
+    try {
+      await rejectResolution(selectedReportId, rejectionReason);
+      Alert.alert('Success', 'Your feedback has been submitted. The report will be reviewed again.');
+      setRejectionModalVisible(false);
+      setRejectionReason('');
+      setSelectedReportId(null);
+      fetchReports(); // Refresh the list
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Error', 'Failed to submit rejection.');
     }
   };
 
@@ -186,6 +243,37 @@ const ReportsScreen = () => {
                         <Text style={styles.statusText}>{item.status}</Text>
                       </View>
 
+                      {/* Confirmation buttons for Pending Confirmation status */}
+                      {item.status === 'Pending Confirmation' && (
+                        <View style={styles.confirmationContainer}>
+                          <View style={styles.confirmationInfo}>
+                            <Text style={styles.confirmationText}>
+                              ⚡ Please confirm if the issue has been resolved
+                            </Text>
+                          </View>
+                          <View style={styles.buttonRow}>
+                            <TouchableOpacity
+                              style={styles.confirmButton}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleConfirmResolution(item._id);
+                              }}
+                            >
+                              <Text style={styles.confirmButtonText}>✓ Confirm Resolved</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.rejectButton}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleRejectResolution(item._id);
+                              }}
+                            >
+                              <Text style={styles.rejectButtonText}>✗ Still Not Resolved</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+
                       {item.landmark && (
                         <>
                           <Text style={styles.label}>Landmark:</Text>
@@ -231,6 +319,46 @@ const ReportsScreen = () => {
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
+          </View>
+        </Modal>
+
+        {/* Rejection Modal */}
+        <Modal
+          visible={rejectionModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setRejectionModalVisible(false)}
+        >
+          <View style={styles.rejectionModalOuter}>
+            <View style={styles.rejectionModalContent}>
+              <Text style={styles.rejectionModalTitle}>Report Issue Not Resolved</Text>
+              <Text style={styles.rejectionModalSubtitle}>
+                Please explain why the issue is still not resolved:
+              </Text>
+              <TextInput
+                style={styles.rejectionInput}
+                placeholder="E.g., The trash is still there..."
+                value={rejectionReason}
+                onChangeText={setRejectionReason}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+              <View style={styles.rejectionButtonRow}>
+                <TouchableOpacity
+                  style={styles.rejectionCancelButton}
+                  onPress={() => setRejectionModalVisible(false)}
+                >
+                  <Text style={styles.rejectionCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.rejectionSubmitButton}
+                  onPress={submitRejection}
+                >
+                  <Text style={styles.rejectionSubmitButtonText}>Submit</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </Modal>
       </ScrollView>
@@ -451,6 +579,122 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  confirmationContainer: {
+    marginTop: 15,
+    padding: 15,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#29b6f6',
+  },
+  confirmationInfo: {
+    marginBottom: 12,
+  },
+  confirmationText: {
+    fontSize: 14,
+    color: '#0277bd',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#4caf50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rejectButton: {
+    flex: 1,
+    backgroundColor: '#ff5722',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rejectButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rejectionModalOuter: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  rejectionModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 25,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  rejectionModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#d32f2f',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  rejectionModalSubtitle: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  rejectionInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 100,
+    marginBottom: 20,
+  },
+  rejectionButtonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  rejectionCancelButton: {
+    flex: 1,
+    backgroundColor: '#9e9e9e',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rejectionCancelButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rejectionSubmitButton: {
+    flex: 1,
+    backgroundColor: '#d32f2f',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  rejectionSubmitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
